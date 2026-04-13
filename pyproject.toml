@@ -1,0 +1,43 @@
+[project]
+name = "ai-g2-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bcrypt==4.0.1",
+    "chromadb>=1.5.5",
+    "email-validator>=2.3.0",
+    "fastapi>=0.127.0",
+    "fastapi-cors>=0.0.6",
+    "langchain-core>=1.2.22",
+    "langchain-openai>=1.1.12",
+    "langgraph>=1.1.3",
+    "llama-index>=0.14.18",
+    "llama-index-embeddings-openai>=0.6.0",
+    "llama-index-llms-openai>=0.7.3",
+    "openai>=2.26.0",
+    "passlib>=1.7.4",
+    "pydantic-settings>=2.12.0",
+    "pymupdf>=1.27.2",
+    "pymysql>=1.1.2",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.21",
+    "sqlalchemy>=2.0.45",
+    "uvicorn[standard]>=0.40.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.12.0",
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# -v 顯示每個測試名稱，-s 顯示 print 輸出
+addopts = "-v"

@@ -1,0 +1,10 @@
+from app.routers.auth import router as auth_router
+from app.routers.user import router as user_router
+from app.routers.department import router as department_router
+from app.routers.role import router as role_router
+from app.routers.permission import router as permission_router
+from app.routers.knowledge_folder import router as knowledge_folder_router
+from app.routers.knowledge_document import router as knowledge_document_router
+from app.routers.knowledge_review import router as knowledge_review_router
+from app.routers.knowledge_favorite import router as knowledge_favorite_router
+from app.routers.ai import router as ai_router

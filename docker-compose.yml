@@ -1,0 +1,60 @@
+name: emks
+
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: dronggore0514
+      MYSQL_DATABASE: AI_G2_DB
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/EMKS_DB.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8100:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: dronggore0514
+      DB_NAME: AI_G2_DB
+      JWT_SECRET_KEY: your-super-secret-key-change-this
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CHROMA_HOST: chromadb
+      EMAIL_MODE: console
+      FRONTEND_URL: http://localhost
+    depends_on:
+      mysql:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    volumes:
+      - uploads_data:/app/uploads
+
+  frontend:
+    build: ../EMKS-Frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  chroma_data:
+  uploads_data:
