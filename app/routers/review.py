@@ -5,9 +5,9 @@ from app.database import get_db
 from app.services.auth import get_current_user
 from app.models import User
 from app.dependencies.rbac import require_admin
-from app.services import knowledge_review as review_service
-from app.services import knowledge_document as document_service
-from app.schemas.knowledge_review import RejectRequest
+from app.services import review as review_service
+from app.services import document as document_service
+from app.schemas.review import RejectRequest
 
 router = APIRouter(
     prefix="/knowledge",

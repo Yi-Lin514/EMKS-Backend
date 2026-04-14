@@ -18,13 +18,13 @@ from app.database import Base
 class KnowledgeFolder(Base):
     """知識庫資料夾模型"""
 
-    __tablename__ = "knowledge_folders"
+    __tablename__ = "folders"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     parent_id = Column(
         Integer,
-        ForeignKey("knowledge_folders.id", ondelete="RESTRICT"),
+        ForeignKey("folders.id", ondelete="RESTRICT"),
         nullable=True,
     )
     department_id = Column(
@@ -52,7 +52,7 @@ class KnowledgeFolder(Base):
 class KnowledgeDocument(Base):
     """知識庫文件模型"""
 
-    __tablename__ = "knowledge_documents"
+    __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String(255), nullable=False)
@@ -60,7 +60,7 @@ class KnowledgeDocument(Base):
 
     folder_id = Column(
         Integer,
-        ForeignKey("knowledge_folders.id", ondelete="SET NULL"),
+        ForeignKey("folders.id", ondelete="SET NULL"),
         nullable=True,
     )
 
@@ -109,7 +109,7 @@ class KnowledgeDocVersion(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     document_id = Column(
         Integer,
-        ForeignKey("knowledge_documents.id", ondelete="CASCADE"),
+        ForeignKey("documents.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -160,7 +160,7 @@ class KnowledgeDocVersion(Base):
 class KnowledgeFavorite(Base):
     """知識庫收藏模型"""
 
-    __tablename__ = "knowledge_favorites"
+    __tablename__ = "favorites"
     __table_args__ = (
         UniqueConstraint("user_id", "document_id", name="uk_user_document"),
     )
@@ -174,7 +174,7 @@ class KnowledgeFavorite(Base):
     )
     document_id = Column(
         Integer,
-        ForeignKey("knowledge_documents.id", ondelete="CASCADE"),
+        ForeignKey("documents.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

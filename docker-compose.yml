@@ -7,7 +7,7 @@ services:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: dronggore0514
-      MYSQL_DATABASE: AI_G2_DB
+      MYSQL_DATABASE: EMKS_DB
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/EMKS_DB.sql:/docker-entrypoint-initdb.d/init.sql
@@ -33,7 +33,7 @@ services:
       DB_PORT: 3306
       DB_USER: root
       DB_PASSWORD: dronggore0514
-      DB_NAME: AI_G2_DB
+      DB_NAME: EMKS_DB
       JWT_SECRET_KEY: your-super-secret-key-change-this
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       CHROMA_HOST: chromadb

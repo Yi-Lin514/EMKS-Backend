@@ -5,9 +5,9 @@ from app.database import get_db
 from app.services.auth import get_current_user
 from app.models import User
 from app.dependencies.rbac import require_admin
-from app.services import knowledge_folder as folder_service
+from app.services import folder as folder_service
 from app.models.knowledge import KnowledgeFolder, KnowledgeDocument
-from app.schemas.knowledge_folder import FolderCreate, FolderUpdate
+from app.schemas.folder import FolderCreate, FolderUpdate
 
 router = APIRouter(
     prefix="/knowledge",

@@ -1,6 +1,6 @@
 -- ============================================================
 -- 企業內部知識管理系統 (EMKS) - 資料庫建置腳本
--- Database: AI_G2_DB
+-- Database: EMKS_DB
 -- MySQL Version: 8.0+
 -- 執行方式: mysql -u root -p < EMKS_DB.sql
 -- ============================================================
@@ -8,13 +8,13 @@
 SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
 
-DROP DATABASE IF EXISTS AI_G2_DB;
+DROP DATABASE IF EXISTS EMKS_DB;
 
-CREATE DATABASE AI_G2_DB
+CREATE DATABASE EMKS_DB
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-USE AI_G2_DB;
+USE EMKS_DB;
 
 -- ============================================================
 -- 會員與權限管理
@@ -335,4 +335,4 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT (SELECT id FROM roles WHERE code = 'guest'), id FROM permissions
 WHERE code = 'document:view';
 
-SELECT '資料庫 AI_G2_DB (EMKS) 建置完成！' AS message;
+SELECT '資料庫 EMKS_DB (EMKS) 建置完成！' AS message;

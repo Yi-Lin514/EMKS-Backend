@@ -8,10 +8,10 @@ from app.routers import (
     department_router,
     role_router,
     permission_router,
-    knowledge_folder_router,
-    knowledge_document_router,
-    knowledge_review_router,
-    knowledge_favorite_router,
+    folder_router,
+    document_router,
+    review_router,
+    favorite_router,
     ai_router,
 )
 
@@ -39,10 +39,10 @@ app.include_router(user_router)
 app.include_router(department_router)
 app.include_router(role_router)
 app.include_router(permission_router)
-app.include_router(knowledge_folder_router)
-app.include_router(knowledge_document_router)
-app.include_router(knowledge_review_router)
-app.include_router(knowledge_favorite_router)
+app.include_router(folder_router)
+app.include_router(document_router)
+app.include_router(review_router)
+app.include_router(favorite_router)
 app.include_router(ai_router)
 
 @app.get("/")

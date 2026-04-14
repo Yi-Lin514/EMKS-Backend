@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.auth import get_current_user
 from app.models import User
-from app.services import knowledge_favorite as favorite_service
-from app.services import knowledge_document as document_service
+from app.services import favorite as favorite_service
+from app.services import document as document_service
 
 router = APIRouter(
     prefix="/knowledge",

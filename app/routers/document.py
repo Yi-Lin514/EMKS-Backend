@@ -8,7 +8,7 @@ from app.database import get_db
 from app.services.auth import get_current_user
 from app.models import User
 from app.config import settings
-from app.services import knowledge_document as document_service
+from app.services import document as document_service
 
 router = APIRouter(
     prefix="/knowledge",

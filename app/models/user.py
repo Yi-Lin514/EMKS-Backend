@@ -54,20 +54,3 @@ class User(Base):
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
     
-    # ==================== 關聯設定 ====================
-    documents = relationship(
-        "Document", 
-        back_populates="uploader", 
-        foreign_keys="Document.uploader_id"
-    )
-    
-    created_tags = relationship(
-        "Tag", 
-        back_populates="creator"
-    )
-    
-    search_history = relationship(
-        "SearchHistory", 
-        back_populates="user",
-        cascade="all, delete-orphan"
-    )
