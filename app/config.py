@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -7,7 +8,12 @@ class Settings(BaseSettings):
     DB_PORT: int = 3306
     DB_USER: str = "root"
     DB_PASSWORD: str = ""
-    DB_NAME: str = "AI_G2_DB"
+    DB_NAME: str = "EMKS_DB"
+    # 雲端可直接覆蓋（如 sqlite:///./demo.db）；本地留空時由上面 DB_* 組成
+    DATABASE_URL: str = ""
+
+    # CORS 白名單，逗號分隔（如 https://x.vercel.app,http://localhost:5173）
+    CORS_ORIGINS: str = ""
 
     # JWT 設定
     JWT_SECRET_KEY: str = "your-secret-key"
@@ -45,9 +51,14 @@ class Settings(BaseSettings):
     PASSWORD_RESET_EXPIRE_HOURS: int = 1
     FRONTEND_URL: str = "http://localhost:5173"
 
-    @property
-    def DATABASE_URL(self) -> str:
-        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    @model_validator(mode="after")
+    def assemble_database_url(self):
+        if not self.DATABASE_URL:
+            self.DATABASE_URL = (
+                f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}"
+                f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+            )
+        return self
 
     class Config:
         env_file = ".env"
