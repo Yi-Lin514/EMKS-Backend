@@ -3,9 +3,11 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from app.config import settings
+from app.database import get_db
 from app.routers import (
     auth_router,
     user_router,
@@ -73,3 +75,13 @@ app.include_router(ai_router)
 @app.get("/")
 def root():
     return {"message": "企業內部知識管理系統 API"}
+
+
+@app.get("/health/ready")
+def health_ready(db: Session = Depends(get_db)):
+    """Seed 是否完成 — 冷啟動期間前端 LoginView 用來決定要不要顯示 loading overlay。"""
+    try:
+        admin = db.query(User).filter(User.email == "admin@demo.com").first()
+        return {"ready": admin is not None}
+    except Exception:
+        return {"ready": False}
