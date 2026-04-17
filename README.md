@@ -1,147 +1,176 @@
-# EMKS Backend — 企業內部知識管理系統（後端）
+# EMKS — 企業內部知識管理系統
 
-基於 FastAPI 的企業知識管理系統後端，核心功能是**文件管理 + RAG 問答 + Agent 自動化**。整個專案從手寫 RAG 做起，逐步引入 LlamaIndex（多輪對話 + SSE）與 LangGraph（Agent），最後整合成單一入口 — 讓 LLM 自己決定該用知識庫檢索還是工具調用。
+AI 驅動的企業知識管理平台：文件管理 + RAG 問答 + Agent 自動化，依 RBAC 權限過濾每個人能看到的知識。
+
+**Live Demo**: https://emks-frontend.vercel.app（首次載入需等 30-120 秒冷啟動）
 
 ---
 
-## 核心亮點
+## 解決什麼問題
 
-### 1. RAG → Agent 統一入口（非 Tab 切換）
-前期用 Tab 分 RAG / Agent 模式做 debug 與對照，確定 Agent 能完整包住 RAG 後合併 — **LLM 自己判斷該檢索知識庫還是呼叫工具**，前端只有一個對話框。走完這一輪才理解「過渡設計」與「統一入口」的取捨。
+企業知識散落在各處，找資料靠人問人。現有工具（SharePoint / Confluence）能存文件但不能問答；通用 AI（ChatGPT）能問答但沒有企業內部知識、也沒有權限控管。
 
-### 2. 手寫先於框架
-- 自己寫 RAG Pipeline（chunk → embed → store → retrieve → generate）後才引入 LlamaIndex
-- 自己寫權限過濾、評估系統、Chunk 策略對比後才用 Agent
-- 知道每個框架在替我做什麼，不是黑盒子
+EMKS 把兩件事合在一起：**用自然語言問公司內部知識，答案只包含你有權限看的文件**。
 
-### 3. 權限過濾設計（pre-filter）
-使用者問問題時，先根據部門/權限算出可見文件範圍，把 `where` 條件傳進 ChromaDB，HNSW 搜尋時就只看有權限的向量 — 不是搜完再砍。
+---
 
-### 4. SSE 串流的 Production 漏洞修復
-連續三輪修復斷線處理：
-- **第一輪**：加 `is_disconnected()` 檢查 + `try/finally` 關閉 LLM stream
-- **第二輪**：發現 async router + sync generator 會讓 DB session 跨 thread → service 改自開 `SessionLocal()`
-- **第三輪深度 review**：`iterate_in_threadpool` 底層不保證同一 worker thread — 剩餘技術債故意保留（成本 vs 風險評估）
+## 核心設計決策
 
-### 5. RAG 評估系統
-RAG 輸出非確定性、無法用單元測試。設計三層評估：Retrieval（找對文件）/ 權限過濾 / Generation（答案品質），搭配 15 組測試題定位問題。
+### 統一入口 — 不讓使用者選 RAG 還是 Agent
+
+原本用 Tab 分 RAG（語意搜尋）和 Agent（工具呼叫）。做完發現兩個問題：
+
+1. 使用者不知道問題該歸哪一類，選錯要退回重問
+2. Agent 不強制走知識庫時會幻覺 — 編出看似合理但錯誤的公司規定
+
+改成單一入口：LangGraph Agent 自己決定要不要呼叫 RAG tool。使用者只管問，Agent 在背後做路由。
+
+### 權限是 pre-filter 不是 post-filter
+
+ChromaDB 查詢時直接把 RBAC 條件傳進 `where` clause，HNSW 搜尋只掃有權限的向量。不是搜完全部再砍結果 — 效能更好、也不會在 response 裡洩漏無權限文件的存在。
+
+### 手寫先於框架
+
+先自己寫完 RAG pipeline（chunk → embed → store → retrieve → generate），再引入 LlamaIndex 和 LangGraph。知道每個框架在替我做什麼。
 
 ---
 
 ## 技術棧
 
-| 類別 | 技術 |
-|------|------|
-| 框架 | FastAPI 0.127 + SQLAlchemy 2.0 + Pydantic 2 |
-| 資料庫 | MySQL 8.0 / ChromaDB（向量） |
+| 層 | 技術 |
+|---|---|
+| Backend | FastAPI + SQLAlchemy 2 + Pydantic 2 |
+| Database | MySQL 8（業務資料）+ ChromaDB（向量） |
 | AI | OpenAI GPT-4o-mini + text-embedding-3-small |
-| RAG / Agent | LlamaIndex（多輪對話）+ LangGraph（Agent 狀態機） |
-| 認證 | JWT + RBAC（Role-Based Access Control） |
-| 部署 | Docker + docker-compose（MySQL / ChromaDB / Backend / Frontend 一鍵啟動） |
-| 套件管理 | uv |
+| Agent | LangGraph（狀態機 + tool calling） |
+| RAG | LlamaIndex（多輪對話改寫）+ ChromaDB（cosine similarity） |
+| Frontend | Vue 3 + Vite 7 + Pinia + Tailwind CSS + Element Plus |
+| Auth | JWT（access + refresh）+ bcrypt + RBAC |
+| Deploy | Render (Backend, Docker) + Vercel (Frontend) |
+| Dev | Docker Compose（MySQL + ChromaDB + Backend + Frontend 一鍵起） |
 
 ---
 
-## 架構
+## 功能一覽
 
-```
-app/
-├── main.py              FastAPI 進入點、router 註冊、CORS
-├── config.py            Settings（pydantic_settings，讀 .env）
-├── database.py          SQLAlchemy engine、SessionLocal、Base
-├── models/              ORM models（user / department / role / permission / knowledge）
-├── schemas/             Pydantic schemas（API 請求/回應）
-├── routers/             API 路由（auth / user / ai / document / folder / review / favorite）
-├── services/            業務邏輯（agent / rag / embedding / vector_store / ...）
-└── dependencies/        FastAPI dependencies（rbac 權限檢查）
-```
+### AI 問答（SSE 串流）
+- 單一對話框，Agent 自動路由 4 個 tools：知識庫搜尋 / 最近文件 / 待審文件 / 熱門問題
+- 多輪對話（LlamaIndex condense question）
+- 逐 token 串流（SSE）+ 引用來源顯示
+- 拒答時不顯示無關來源（Sources UX 優化）
 
-**資料流分層**：Router → Service → Model → Database
+### 文件管理 + 向量化
+- 資料夾樹狀結構 + 文件上傳（.txt / .pdf）
+- 審核流程（pending → approved / rejected）
+- 版本控制（上傳新版 / 回滾舊版）
+- 審核通過自動觸發向量化（chunk → embed → ChromaDB）
+
+### RBAC 權限
+- 5 個預設角色（super_admin → guest），可自訂
+- 細粒度權限碼（`resource:action`，如 `user:create`、`ai:chat`）
+- 前端路由守衛 + 後端 dependency injection 雙層檢查
+- AI 問答依角色動態載入可用 tools + 搜尋結果 pre-filter
+
+### 帳號系統
+- 登入 / 登出 / token auto-refresh
+- 忘記密碼（SMTP 寄信 → 一次性 token → 重設）
+- 帳號啟用（admin 建帳號 → 寄啟用信 → 設密碼）
+- 登入失敗鎖定（5 次 → 15 分鐘）+ 稽核紀錄
 
 ---
 
-## 主要資料流
+## 架構概覽
 
-### 文件上傳 → 向量化
 ```
-前端上傳 → Router 驗證 → Service 存檔 + 寫 MySQL metadata
-        → Chunk 切塊（重疊 200 字元）→ OpenAI Embedding
-        → ChromaDB 儲存向量 + metadata（含權限）
+Vue 3 SPA ──fetch/SSE──► FastAPI ──► LangGraph Agent
+(Vercel)     axios/REST    (Render)       │
+                              │           ├─ search_knowledge_base → ChromaDB (pre-filter)
+                              │           ├─ get_recent_documents   → MySQL
+                              │           ├─ get_pending_reviews    → MySQL
+                              │           └─ get_popular_questions  → MySQL (admin only)
+                              │
+                              ├──► MySQL 8 (users, documents, chat, RBAC)
+                              ├──► ChromaDB (vectors + RBAC metadata)
+                              └──► OpenAI API (GPT-4o-mini + embedding)
 ```
 
-### AI 問答（統一入口）
-```
-使用者問題 → SSE 串流端點 → Condense Question（多輪對話改寫）
-        → LangGraph Agent 決策
-            ├─ 需要知識庫 → search_knowledge tool → ChromaDB（pre-filter 權限）
-            └─ 特殊任務 → 其他 tool（條件性啟用，RBAC 控制）
-        → LLM 生成 → 逐 token 推到前端
-        → 儲存對話紀錄（含引用來源）
-```
+**分層**：Router（HTTP + auth）→ Service（業務邏輯）→ Model（ORM）→ Database
+
+完整架構圖、API 列表、DB schema、資料流細節見 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
 ---
 
 ## 快速啟動
 
-### 本機開發
-
-```bash
-# 1. 安裝依賴
-uv sync
-
-# 2. 設定 .env（複製 .env.example，填入你的 OPENAI_API_KEY 等）
-cp .env.example .env
-
-# 3. 建立資料庫
-mysql -u root -p < database/EMKS_DB.sql
-
-# 4. 建立管理員帳號（demo seed，可選）
-mysql -u root -p EMKS_DB < seed.sql  # 參考 database/demo_seed.sql
-
-# 5. 啟動
-uv run uvicorn app.main:app --reload
-```
-
 ### Docker（推薦）
 
 ```bash
+cd EMKS-Backend
 docker-compose up -d
 ```
 
-一鍵啟動 MySQL / ChromaDB / Backend / Frontend 四個容器。
+一鍵起 MySQL / ChromaDB / Backend / Frontend 四個容器。開 http://localhost 即用。
+
+### 本機開發
+
+```bash
+# Backend (cwd = EMKS-Backend/)
+uv sync
+cp .env.example .env          # 填 OPENAI_API_KEY 等
+mysql -u root -p < database/EMKS_DB.sql
+uv run uvicorn app.main:app --reload
+
+# Frontend (cwd = EMKS-Frontend/)
+npm install
+npm run dev
+```
+
+Swagger：http://localhost:8000/docs
 
 ---
 
-## API 概覽
+## 踩過的坑（精選）
 
-| Prefix | 功能 |
-|--------|------|
-| `/auth` | 登入 / 登出 / 忘記密碼 / Refresh Token |
-| `/users` / `/departments` / `/roles` / `/permissions` | 會員權限管理 |
-| `/knowledge/documents` | 文件 CRUD + 版本控制 + 下載 |
-| `/knowledge/folders` | 資料夾樹狀結構 |
-| `/knowledge/reviews` | 文件審核流程 |
-| `/knowledge/favorites` | 我的收藏 |
-| `/ai/agent` (SSE) | 統一入口 AI 對話 |
-| `/ai/conversations` | 對話紀錄 CRUD |
-
-啟動後開 `http://localhost:8000/docs` 看完整 Swagger。
+| 問題 | 根因 | 解法 |
+|------|------|------|
+| SSE 跨 thread DB session 爆炸 | async router + sync generator，FastAPI `iterate_in_threadpool` 不保證同 thread | Service 層自開 SessionLocal，不依賴 router 注入的 session |
+| RAG relevance threshold 0.5 太高 | `text-embedding-3-small` + 中文內容的 cosine 分數偏低 | 退到 0.35，用實測結果校正 |
+| Agent 拒答但來源面板 dump 無關文件 | 多輪 tool call 累積 sources 無 dedup + threshold 太低 | dedup by document_id + 拒答偵測不送 sources |
+| Render 冷啟動 container 重啟後空白 | seed 模組沒 commit + seed_docs 沒 COPY 進 image | 補 commit + Dockerfile 加 COPY |
+| Vercel SPA deep link 404 | Vue Router history mode 需 server fallback | vercel.json rewrite all → index.html |
 
 ---
 
-## 開發歷程（簡版）
+## 開發歷程
 
 | 階段 | 內容 |
 |:----:|------|
-| Phase 1 | 需求規格 + 既有架構分析 |
-| Phase 2 | 後端：文件管理 + RAG Pipeline + AI 問答 |
-| Phase 3 | 前端：知識庫 UI + 對話介面 |
-| Phase 4 | 業務邏輯重構（資料夾 + 審核 + 收藏 + 版本控制） |
-| Phase 5 | 手寫強化：權限過濾 + RAG 評估 + Chunk 策略優化 |
-| Phase 6 | Docker 容器化（全服務打包） |
-| Phase 7 | LlamaIndex：多輪對話 + SSE 串流 |
-| Phase 8 | LangGraph：Agent 自動化 |
-| Phase 9 | 統一入口（RAG + Agent 合併） |
+| 1 | 需求規格 + 架構設計 |
+| 2 | 後端：文件管理 + 手寫 RAG Pipeline |
+| 3 | 前端：知識庫 UI + 對話介面 |
+| 4 | 業務邏輯重構（資料夾 / 審核 / 收藏 / 版本控制） |
+| 5 | 手寫強化：權限 pre-filter + RAG 評估 + Chunk 策略優化 |
+| 6 | Docker 容器化（全服務一鍵啟動） |
+| 7 | LlamaIndex 引入：多輪對話 + SSE 串流 |
+| 8 | LangGraph 引入：Agent 狀態機 + tool calling |
+| 9 | 統一入口（RAG + Agent 合併）+ 雲端部署（Render + Vercel） |
+
+---
+
+## Repo 結構
+
+```
+EMKS/
+├── EMKS-Backend/        ← 你在這裡
+│   ├── app/             FastAPI application
+│   ├── database/        MySQL init schema
+│   ├── seed_docs/       Demo 文件（8 份）
+│   ├── ARCHITECTURE.md  完整技術細節
+│   └── docker-compose.yml
+└── EMKS-Frontend/       Vue 3 SPA（獨立 repo）
+```
+
+Backend / Frontend 是兩個獨立 git repo，不是 monorepo。
 
 ---
 
