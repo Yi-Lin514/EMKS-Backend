@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
     RAG_SEARCH_RESULTS: int = 5
-    RAG_RELEVANCE_THRESHOLD: float = 0.5
+    RAG_RELEVANCE_THRESHOLD: float = 0.35
 
     # 檔案上傳設定
     UPLOAD_DIR: str = "uploads/knowledge"
