@@ -196,8 +196,19 @@ def search_knowledge_base(query: str) -> str:
         return "知識庫中找不到足夠相關的資料。"
 
     # 把結構化 sources 寫進 context dict，供 run_agent_stream 讀出送前端
-    # 用 extend 而非 set — mutable list 的修改在所有 context 副本都可見
-    ctx.get("sources", []).extend(sources)
+    # dedup by document_id：多輪工具呼叫會重複搜到同份文件，只保留最高相關度的 chunk
+    existing = ctx.get("sources", [])
+    seen: dict[int, int] = {}  # document_id → index in existing
+    for i, s in enumerate(existing):
+        seen[s["document_id"]] = i
+    for s in sources:
+        did = s["document_id"]
+        if did in seen:
+            if s["relevance_score"] > existing[seen[did]]["relevance_score"]:
+                existing[seen[did]] = s
+        else:
+            seen[did] = len(existing)
+            existing.append(s)
 
     return f"搜尋到 {len(lines)} 筆相關內容：\n\n" + "\n\n---\n\n".join(lines)
 
@@ -384,7 +395,10 @@ def run_agent_stream(
                     yield f"data: {json.dumps({'type': 'token', 'content': msg_chunk.content}, ensure_ascii=False)}\n\n"
 
         # 4. 送參考來源（如果 search_knowledge_base 有收集到）
+        # 按相關度排序，最多送 5 筆給前端
         sources = _user_context_var.get().get("sources", [])
+        sources.sort(key=lambda s: s["relevance_score"], reverse=True)
+        sources = sources[:5]
         if sources:
             yield f"data: {json.dumps({'type': 'sources', 'sources': sources}, ensure_ascii=False)}\n\n"
 
