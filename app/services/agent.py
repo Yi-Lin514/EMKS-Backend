@@ -395,8 +395,11 @@ def run_agent_stream(
                     yield f"data: {json.dumps({'type': 'token', 'content': msg_chunk.content}, ensure_ascii=False)}\n\n"
 
         # 4. 送參考來源（如果 search_knowledge_base 有收集到）
+        # Agent 拒答時不送 sources — 搜到的 chunk 跟問題無關，顯示只會誤導
+        _REFUSAL_MARKERS = ("沒有權限", "沒有工具", "無法查詢", "找不到相關")
+        agent_refused = any(m in full_answer for m in _REFUSAL_MARKERS)
+        sources = _user_context_var.get().get("sources", []) if not agent_refused else []
         # 按相關度排序，最多送 5 筆給前端
-        sources = _user_context_var.get().get("sources", [])
         sources.sort(key=lambda s: s["relevance_score"], reverse=True)
         sources = sources[:5]
         if sources:
