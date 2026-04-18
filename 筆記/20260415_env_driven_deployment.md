@@ -2,7 +2,7 @@
 
 > 類型：📦 建構型（寫完歸檔，不主動擴充）
 > 上下文：雲端部署 B 階段（本地實作）完成
-> 配套檔案：[../../CLAUDE-DEPLOYMENT-ADR.md](../../CLAUDE-DEPLOYMENT-ADR.md)
+> 配套檔案：[../../ADR.md](../../ADR.md)
 
 ## 為什麼寫這份筆記
 

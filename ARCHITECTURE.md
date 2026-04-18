@@ -620,7 +620,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 | 5 | user_tokens 無清理 | 過期 token 不刪，表無限長。Production 加 cron |
 | 6 | 上傳只驗副檔名 | 不驗 MIME type，惡意 PDF 可能 crash pymupdf |
 | 7 | Permission 每次 JOIN 3 表 | 量大加 Redis TTL cache |
-| 8 | Structured logging 尚未覆蓋全層 | 基礎已建（loguru + request_id / user_id ContextVar + middleware，見 [STRUCTURED-LOGGING-NOTES.md](../STRUCTURED-LOGGING-NOTES.md)）；SSE agent 每輪 tool call 的 structured log 尚未補 |
+| 8 | Structured logging 尚未覆蓋全層 | 基礎已建（loguru + request_id / user_id ContextVar + middleware，見 [STRUCTURED-LOGGING-NOTES.md](../notes/STRUCTURED-LOGGING-NOTES.md)）；SSE agent 每輪 tool call 的 structured log 尚未補 |
 | 9 | iterate_in_threadpool 不保證同 thread | 技術債故意保留（成本 vs 風險評估過） |
 
 ---

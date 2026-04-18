@@ -2,7 +2,7 @@
 
 > 文件用途：記錄 EMKS demo seed 的設計決策、權衡、與本地驗證做法。
 > 寫給：未來接手的 Claude session、寫 README Architecture 章節時的參考素材。
-> 上層脈絡：見 [CLAUDE-DEPLOYMENT-ADR.md](../../CLAUDE-DEPLOYMENT-ADR.md)（部署整體規劃）。
+> 上層脈絡：見 [ADR.md](../../ADR.md)（部署整體規劃）。
 
 ---
 
@@ -10,7 +10,7 @@
 
 EMKS 部署採「路線 A — 全 stateless demo」：Render 免費方案的容器每次重啟（通常因為 15 分鐘無流量被休眠喚醒）會清空 ephemeral disk。沒有 persistent 儲存就沒有累積資料的能力，所以需要 seed 在每次冷啟動時**自動把 demo 環境重建出來**。
 
-這個取捨的好處與代價見 [CLAUDE-DEPLOYMENT-ADR.md 「核心策略」](../../CLAUDE-DEPLOYMENT-ADR.md)。本文聚焦在 seed 本身怎麼實作。
+這個取捨的好處與代價見 [ADR.md 「核心策略」](../../ADR.md)。本文聚焦在 seed 本身怎麼實作。
 
 ---
 
@@ -247,7 +247,7 @@ Seed 在 `asyncio.to_thread(run_seed_sync)` 跑，stdout 經過 worker thread + 
 
 ## 8. 跟其他文件的關係
 
-- 部署整體規劃 → [CLAUDE-DEPLOYMENT-ADR.md](../../CLAUDE-DEPLOYMENT-ADR.md)（meta-repo 根）
+- 部署整體規劃 → [ADR.md](../../ADR.md)（meta-repo 根）
 - 專案開發指引 → [CLAUDE.md](../../CLAUDE.md)（meta-repo 根）
 - 後端 API 跟架構 → [README.md](../README.md)（待補 Architecture 章節時可從本文件擷取）
 - 文件生成提示詞（備案） → [seed_docs/PROMPTS.md](../seed_docs/PROMPTS.md)
