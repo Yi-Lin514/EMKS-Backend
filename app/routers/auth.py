@@ -28,6 +28,7 @@ from app.services import (
     hash_password,
 )
 from app.dependencies import get_user_permissions, require_permission
+from app.rate_limit import limiter
 
 # 帳號鎖定設定
 MAX_FAILED_ATTEMPTS = 5
@@ -84,6 +85,7 @@ def _record_login(
 # ========== 登入 ==========
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 def login(
     login_data: LoginRequest,
     request: Request,

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import iterate_in_threadpool
 
 from app.database import get_db
+from app.rate_limit import limiter
 from app.services.auth import get_current_user
 from app.models import User
 from app.dependencies.rbac import get_user_permissions
@@ -29,6 +30,7 @@ def _check_admin(db: Session, user_id: int) -> bool:
 
 
 @router.post("/agent")
+@limiter.limit("5/minute;10/day")
 async def agent_chat(
     payload: AgentRequest,
     request: Request,

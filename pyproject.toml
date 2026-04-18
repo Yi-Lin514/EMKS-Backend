@@ -24,6 +24,7 @@ dependencies = [
     "pymysql>=1.1.2",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.21",
+    "slowapi>=0.1.9",
     "sqlalchemy>=2.0.45",
     "uvicorn[standard]>=0.40.0",
 ]

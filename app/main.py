@@ -8,10 +8,12 @@ from uuid import uuid4
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.logging_config import configure_logging, request_id_var
+from app.rate_limit import limiter
 from app.routers import (
     auth_router,
     user_router,
@@ -56,6 +58,26 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Rate limiting — key = user_id (from JWT) 或 IP fallback；見 app/rate_limit.py
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    from fastapi.responses import JSONResponse
+
+    logger.bind(
+        path=request.url.path,
+        limit=str(exc.detail),
+    ).warning(f"rate limit hit: {request.url.path} ({exc.detail})")
+    response = JSONResponse(
+        status_code=429,
+        content={"detail": f"請求過於頻繁，請稍後再試（{exc.detail}）"},
+    )
+    response.headers["Retry-After"] = "60"
+    return response
+
 
 # CORS 設定
 app.add_middleware(
