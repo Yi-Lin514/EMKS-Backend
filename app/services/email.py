@@ -1,25 +1,24 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+from loguru import logger
+
 from app.config import settings
 
 
 def send_email(to_email: str, subject: str, html_content: str) -> bool:
     """
     寄送 Email
-    - console 模式：印在終端機（開發用）
+    - console 模式：log 出來就好（開發用）
     - smtp 模式：真的寄信（Demo/上線用）
     """
-    # console 模式：印出來就好
+    # console 模式：log 一行摘要，HTML body 放 DEBUG level（DEBUG=false 時不吐）
     if settings.EMAIL_MODE == "console":
-        print("\n" + "=" * 50)
-        print("📧 Email（console 模式）")
-        print("=" * 50)
-        print(f"收件人：{to_email}")
-        print(f"主旨：{subject}")
-        print("-" * 50)
-        print(html_content)
-        print("=" * 50 + "\n")
+        logger.bind(to=to_email, mode="console").info(
+            f"[email] to={to_email} subject={subject!r}"
+        )
+        logger.bind(to=to_email).debug(f"[email] body:\n{html_content}")
         return True
 
     # smtp 模式：真的寄信
@@ -39,10 +38,13 @@ def send_email(to_email: str, subject: str, html_content: str) -> bool:
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.sendmail(settings.EMAIL_FROM, to_email, msg.as_string())
 
+        logger.bind(to=to_email, mode="smtp").info(
+            f"[email] sent to={to_email} subject={subject!r}"
+        )
         return True
 
-    except Exception as e:
-        print(f"寄信失敗：{e}")
+    except Exception:
+        logger.bind(to=to_email).exception(f"[email] send failed to={to_email}")
         return False
 
 

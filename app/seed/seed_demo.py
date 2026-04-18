@@ -17,6 +17,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.database import Base, SessionLocal, engine
@@ -277,17 +278,21 @@ def _seed_one_document(
         version.vectorization_status = "completed"
         version.chunk_count = chunk_count
         db.commit()
-        print(f"[seed] vectorized: {filename} ({chunk_count} chunks)")
+        logger.bind(filename=filename, chunk_count=chunk_count).info(
+            f"[seed] vectorized: {filename} ({chunk_count} chunks)"
+        )
     except Exception as exc:
         version.vectorization_status = "failed"
         version.error_message = str(exc)[:500]
         db.commit()
-        print(f"[seed] vectorization FAILED for {filename}: {exc}")
+        logger.bind(filename=filename).exception(
+            f"[seed] vectorization FAILED for {filename}"
+        )
 
 
 def _seed_documents(db: Session, ctx: dict) -> None:
     if not SEED_DOCS_DIR.exists():
-        print(f"[seed] {SEED_DOCS_DIR} not found, skip documents")
+        logger.warning(f"[seed] {SEED_DOCS_DIR} not found, skip documents")
         return
 
     SEED_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,7 +300,7 @@ def _seed_documents(db: Session, ctx: dict) -> None:
     for filename, perm_level, dept_code in DOCUMENTS:
         src = SEED_DOCS_DIR / filename
         if not src.exists():
-            print(f"[seed] skip missing file: {filename}")
+            logger.warning(f"[seed] skip missing file: {filename}")
             continue
 
         department_id = ctx["dept"][dept_code] if dept_code else None
@@ -317,16 +322,16 @@ def run_seed_sync() -> None:
     db = SessionLocal()
     try:
         if _already_seeded(db):
-            print("[seed] already seeded, skip")
+            logger.info("[seed] already seeded, skip")
             return
 
-        print("[seed] start...")
+        logger.info("[seed] start...")
         ctx = _seed_rbac(db)
         _seed_documents(db, ctx)
-        print("[seed] done")
-    except Exception as exc:
+        logger.info("[seed] done")
+    except Exception:
         db.rollback()
-        print(f"[seed] FATAL: {exc}")
+        logger.exception("[seed] FATAL")
         raise
     finally:
         db.close()

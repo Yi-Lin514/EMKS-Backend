@@ -2,12 +2,16 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from time import perf_counter
+from uuid import uuid4
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
+from app.logging_config import configure_logging, request_id_var
 from app.routers import (
     auth_router,
     user_router,
@@ -25,14 +29,16 @@ from app.routers import (
 from app.models import User, KnowledgeDocument
 from app.seed import run_seed_sync
 
+# 啟動時設定 logging（module import 就執行一次）
+configure_logging()
+
 
 async def _run_seed_background() -> None:
-    """背景跑 seed。失敗不 propagate（不讓 seed 失敗導致 server 掛掉），但會印出 traceback。"""
+    """背景跑 seed。失敗不 propagate（不讓 seed 失敗導致 server 掛掉），log 會附 traceback。"""
     try:
         await asyncio.to_thread(run_seed_sync)
     except Exception:
-        import traceback
-        traceback.print_exc()
+        logger.exception("seed background task crashed")
 
 
 @asynccontextmanager
@@ -59,6 +65,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """每個 request 產生 / 讀取 request_id，塞進 ContextVar 讓整條鏈路 log 都能帶上。"""
+    rid = request.headers.get("x-request-id") or uuid4().hex[:12]
+    token = request_id_var.set(rid)
+    start = perf_counter()
+    try:
+        response = await call_next(request)
+        duration_ms = round((perf_counter() - start) * 1000)
+        logger.bind(
+            method=request.method,
+            path=request.url.path,
+            status=response.status_code,
+            duration_ms=duration_ms,
+        ).info(f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)")
+        response.headers["X-Request-ID"] = rid
+        return response
+    except Exception:
+        duration_ms = round((perf_counter() - start) * 1000)
+        logger.bind(
+            method=request.method,
+            path=request.url.path,
+            duration_ms=duration_ms,
+        ).exception(f"{request.method} {request.url.path} crashed ({duration_ms}ms)")
+        raise
+    finally:
+        request_id_var.reset(token)
+
 
 # 路由註冊
 app.include_router(auth_router)

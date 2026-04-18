@@ -10,6 +10,7 @@ import secrets
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.database import get_db
+from app.logging_config import user_id_var
 from app.models import User
 
 
@@ -195,5 +196,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="使用者不存在"
         )
-    # 3. 回傳使用者物件
+    # 3. bind 到 ContextVar → 這個 request 後續所有 log 都會自動帶 user_id
+    user_id_var.set(user.id)
+    # 4. 回傳使用者物件
     return user

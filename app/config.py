@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     PASSWORD_RESET_EXPIRE_HOURS: int = 1
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Logging 設定
+    # 本地預設 False（彩色人類可讀）；雲端 Render 設 LOG_JSON=true 吐 JSON 給 log aggregator 吃
+    LOG_JSON: bool = False
+    LOG_LEVEL: str = "INFO"
+
     @model_validator(mode="after")
     def assemble_database_url(self):
         if not self.DATABASE_URL:
