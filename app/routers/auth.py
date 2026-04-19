@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 from app.schemas import (
     LoginRequest,
@@ -89,6 +89,7 @@ def _record_login(
 def login(
     login_data: LoginRequest,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ):
     """使用者登入"""

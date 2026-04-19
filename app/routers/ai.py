@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from starlette.concurrency import iterate_in_threadpool
@@ -34,6 +34,7 @@ def _check_admin(db: Session, user_id: int) -> bool:
 async def agent_chat(
     payload: AgentRequest,
     request: Request,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
