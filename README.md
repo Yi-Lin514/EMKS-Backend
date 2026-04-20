@@ -117,7 +117,7 @@ docker-compose up -d
 # Backend (cwd = EMKS-Backend/)
 uv sync
 cp .env.example .env          # 填 OPENAI_API_KEY 等
-mysql -u root -p < database/EMKS_DB.sql
+# 需本機 MySQL 先跑著並建好 EMKS_DB database；schema 與 seed 皆由 FastAPI 啟動時 Python seed 自動處理
 uv run uvicorn app.main:app --reload
 
 # Frontend (cwd = EMKS-Frontend/)
@@ -162,8 +162,7 @@ Swagger：http://localhost:8000/docs
 ```
 EMKS/
 ├── EMKS-Backend/        ← 你在這裡
-│   ├── app/             FastAPI application
-│   ├── database/        MySQL init schema
+│   ├── app/             FastAPI application（含 seed_demo.py — schema + data 單一來源）
 │   ├── seed_docs/       Demo 文件（8 份）
 │   ├── ARCHITECTURE.md  完整技術細節
 │   └── docker-compose.yml

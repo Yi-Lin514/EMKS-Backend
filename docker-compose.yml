@@ -10,7 +10,6 @@ services:
       MYSQL_DATABASE: EMKS_DB
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database/EMKS_DB.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s

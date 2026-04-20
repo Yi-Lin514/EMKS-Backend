@@ -158,16 +158,19 @@ app/
 | DELETE | `/knowledge/folders/{id}` | admin | 刪資料夾（有子節點或文件時拒絕） |
 
 ### Knowledge — Document（8）
+
+Read endpoints 只檢查 JWT + resource-level `can_access_document`（public 所有人可讀 / department 限同部門 / admin bypass）。Write endpoints 多掛一層 role-level `require_permission`，兩軸同時通過才放行。
+
 | Method | Path | Auth | 說明 |
 |--------|------|------|------|
-| POST | `/knowledge/documents` | JWT | 上傳文件（支援多檔，.txt / .pdf） |
-| GET | `/knowledge/documents` | JWT | 文件列表 |
-| GET | `/knowledge/documents/{id}` | JWT | 單一文件詳情 |
-| DELETE | `/knowledge/documents/{id}` | JWT | 軟刪文件 + 清 ChromaDB chunks |
-| POST | `/knowledge/documents/{id}/versions` | JWT | 上傳新版本（checksum 防重複） |
-| GET | `/knowledge/documents/{id}/versions` | JWT | 版本列表 |
-| GET | `/knowledge/documents/{id}/versions/{vid}/download` | JWT | 下載指定版本 |
-| POST | `/knowledge/documents/{id}/versions/{vid}/restore` | JWT | 還原到舊版本（建新版，需重審） |
+| POST | `/knowledge/documents` | document:create | 上傳文件（支援多檔，.txt / .pdf） |
+| GET | `/knowledge/documents` | JWT + resource filter | 文件列表（SQL-level pre-filter） |
+| GET | `/knowledge/documents/{id}` | JWT + resource check | 單一文件詳情 |
+| DELETE | `/knowledge/documents/{id}` | document:delete + resource check | 軟刪文件 + 清 ChromaDB chunks |
+| POST | `/knowledge/documents/{id}/versions` | document:edit + resource check | 上傳新版本（checksum 防重複） |
+| GET | `/knowledge/documents/{id}/versions` | JWT + resource check | 版本列表 |
+| GET | `/knowledge/documents/{id}/versions/{vid}/download` | JWT + resource check | 下載指定版本 |
+| POST | `/knowledge/documents/{id}/versions/{vid}/restore` | document:edit + resource check | 還原到舊版本（建新版，需重審） |
 
 ### Knowledge — Review（3）
 | Method | Path | Auth | 說明 |
@@ -232,15 +235,16 @@ departments ◄──────────── users ───────�
 
 ### 預設角色權限矩陣
 
-SQL 定義 23 個權限碼（含 manage 類），下表簡化為主要操作：
+Python seed（[app/seed/seed_demo.py](app/seed/seed_demo.py)）定義 17 個權限碼，四個預設角色（admin / manager / employee / viewer）。Document read 不靠 permission code，改走 resource-level `can_access_document`（public 所有人可讀、department 限同部門、admin bypass）。
 
-| 角色 | 文件 | 使用者 | 部門 | 角色 | 系統 | AI |
-|------|------|--------|------|------|------|-----|
-| super_admin | 全部 | 全部 | 全部 | 全部 | 全部 | chat + admin_tools + manage |
-| dept_admin | CRUD | view/create/edit | view/edit | - | - | chat |
-| editor | view/create/edit | - | - | - | - | chat |
-| viewer | view | - | - | - | - | chat |
-| guest | view | - | - | - | - | - |
+| 角色 | Document write | User | Department | Role | System | AI |
+|------|----------------|------|------------|------|--------|-----|
+| admin | create/edit/delete | 全部 | 全部 | 全部 | view | admin_tools |
+| manager | create/edit/delete | view | view | view | view | - |
+| employee | create/edit | - | view | - | - | - |
+| viewer | - | - | - | - | - | - |
+
+所有 logged-in user（含 viewer）都可 read document — 但實際回傳哪些由 resource-level filter 決定。
 
 ---
 
