@@ -18,6 +18,7 @@ class SourceDocument(BaseModel):
     document_title: str
     chunk_content: str
     relevance_score: float
+    current_version_id: Optional[int] = None
 
 
 class ChatResponse(BaseModel):

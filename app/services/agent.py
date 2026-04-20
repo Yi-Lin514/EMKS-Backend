@@ -194,6 +194,22 @@ def search_knowledge_base(query: str) -> str:
     if not lines:
         return "知識庫中找不到足夠相關的資料。"
 
+    # enrich sources with current_version_id so frontend can build download URL
+    # (Chroma metadata 刻意不存 version_id — 新版核准時會 re-index，
+    # 只有 current version 的 chunks 會留下；真要下載仍以 DB 當下狀態為準)
+    doc_ids = [s["document_id"] for s in sources]
+    db = _get_db()
+    try:
+        version_map = dict(
+            db.query(KnowledgeDocument.id, KnowledgeDocument.current_version_id)
+            .filter(KnowledgeDocument.id.in_(doc_ids))
+            .all()
+        )
+        for s in sources:
+            s["current_version_id"] = version_map.get(s["document_id"])
+    finally:
+        db.close()
+
     # 把結構化 sources 寫進 context dict，供 run_agent_stream 讀出送前端
     # dedup by document_id：多輪工具呼叫會重複搜到同份文件，只保留最高相關度的 chunk
     existing = ctx.get("sources", [])
