@@ -3,11 +3,13 @@ RBAC (Role-Based Access Control) 依賴項
 """
 
 from fastapi import Depends, HTTPException, status
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from typing import List, Callable
 
 from app.database import get_db
 from app.models import User, UserRole, RolePermission, Permission
+from app.models.knowledge import KnowledgeDocument
 from app.services.auth import get_current_user
 
 
@@ -61,3 +63,38 @@ def require_permission(permission_code: str) -> Callable:
         return current_user
 
     return permission_checker
+
+
+def can_access_document(db: Session, user: User, document: KnowledgeDocument) -> bool:
+    """文件 resource-level 權限檢查，語意與 build_permission_filter (RAG) 一致。
+
+    - 擁有 ai:admin_tools（admin 角色）→ 直接通過；跟 RAG 層同一個判斷點
+    - permission_level='public' → 所有登入使用者可讀
+    - permission_level='department' → 僅同部門可讀
+    """
+    if "ai:admin_tools" in get_user_permissions(db, user.id):
+        return True
+    if document.permission_level == "public":
+        return True
+    if (
+        document.permission_level == "department"
+        and user.department_id is not None
+        and user.department_id == document.department_id
+    ):
+        return True
+    return False
+
+
+def build_document_access_filter(db: Session, user: User):
+    """為 KnowledgeDocument 查詢建立權限 WHERE 子句；回傳 None 表示不需要過濾（admin）。"""
+    if "ai:admin_tools" in get_user_permissions(db, user.id):
+        return None
+    if user.department_id is None:
+        return KnowledgeDocument.permission_level == "public"
+    return or_(
+        KnowledgeDocument.permission_level == "public",
+        and_(
+            KnowledgeDocument.permission_level == "department",
+            KnowledgeDocument.department_id == user.department_id,
+        ),
+    )

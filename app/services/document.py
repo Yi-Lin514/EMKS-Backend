@@ -177,10 +177,10 @@ def restore_version(
     return version
 
 
-def get_documents(db: Session) -> list[KnowledgeDocument]:
-    """獲取所有知識文件"""
+def get_documents(db: Session, extra_filter=None) -> list[KnowledgeDocument]:
+    """獲取所有知識文件；extra_filter 用於套入 RBAC 的 permission_level/department_id 過濾。"""
 
-    return (
+    query = (
         db.query(KnowledgeDocument)
         .options(
             joinedload(KnowledgeDocument.current_version),
@@ -189,9 +189,10 @@ def get_documents(db: Session) -> list[KnowledgeDocument]:
             joinedload(KnowledgeDocument.versions),
         )
         .filter(KnowledgeDocument.is_deleted == False)
-        .order_by(KnowledgeDocument.created_at.desc())
-        .all()
     )
+    if extra_filter is not None:
+        query = query.filter(extra_filter)
+    return query.order_by(KnowledgeDocument.created_at.desc()).all()
 
 
 def get_document_by_id(db: Session, document_id: int) -> KnowledgeDocument | None:

@@ -9,6 +9,10 @@ from app.services.auth import get_current_user
 from app.models import User
 from app.config import settings
 from app.services import document as document_service
+from app.dependencies.rbac import (
+    build_document_access_filter,
+    can_access_document,
+)
 
 router = APIRouter(
     prefix="/knowledge",
@@ -92,9 +96,10 @@ def list_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """取得文件列表，版本相關資訊從 current_version 取得"""
+    """取得文件列表，版本相關資訊從 current_version 取得；套入 RBAC pre-filter。"""
 
-    documents = document_service.get_documents(db)
+    access_filter = build_document_access_filter(db, current_user)
+    documents = document_service.get_documents(db, extra_filter=access_filter)
 
     data = []
     for doc in documents:
@@ -141,6 +146,11 @@ def get_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在",
         )
+    if not can_access_document(db, current_user, document):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="沒有權限存取此文件",
+        )
 
     cv = document.current_version
 
@@ -181,6 +191,11 @@ def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在",
         )
+    if not can_access_document(db, current_user, document):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="沒有權限存取此文件",
+        )
 
     document_service.soft_delete_document(db, document)
 
@@ -204,6 +219,11 @@ async def upload_new_version(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在",
+        )
+    if not can_access_document(db, current_user, document):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="沒有權限存取此文件",
         )
 
     extension = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
@@ -264,6 +284,11 @@ def get_versions(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在",
         )
+    if not can_access_document(db, current_user, document):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="沒有權限存取此文件",
+        )
 
     versions = document_service.get_versions(db, document.id)
 
@@ -306,6 +331,11 @@ def download_version(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在",
         )
+    if not can_access_document(db, current_user, document):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="沒有權限存取此文件",
+        )
 
     version = document_service.get_version_by_id(db, version_id)
     if not version or version.document_id != document.id:
@@ -343,6 +373,11 @@ def restore_version(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在",
+        )
+    if not can_access_document(db, current_user, document):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="沒有權限存取此文件",
         )
 
     source_version = document_service.get_version_by_id(db, version_id)
