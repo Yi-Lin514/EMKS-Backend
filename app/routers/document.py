@@ -12,6 +12,7 @@ from app.services import document as document_service
 from app.dependencies.rbac import (
     build_document_access_filter,
     can_access_document,
+    require_permission,
 )
 
 router = APIRouter(
@@ -28,7 +29,7 @@ async def upload_document(
     department_id: Optional[int] = Form(default=None),
     folder_id: Optional[int] = Form(default=None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("document:create")),
 ):
     """上傳一或多個新文件，同時建立 document + v1 版本（status=pending）"""
 
@@ -181,7 +182,7 @@ def get_document(
 def delete_document(
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("document:delete")),
 ):
     """軟刪除文件並清除 ChromaDB 中的 chunks"""
 
@@ -210,7 +211,7 @@ async def upload_new_version(
     document_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("document:edit")),
 ):
     """上傳新版本，檢查檔案類型一致 + checksum 防重複，status=pending 待審核"""
 
@@ -364,7 +365,7 @@ def restore_version(
     document_id: int,
     version_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("document:edit")),
 ):
     """還原指定版本（複製檔案建立新版本，需重新審核），只能還原 approved 的版本"""
 

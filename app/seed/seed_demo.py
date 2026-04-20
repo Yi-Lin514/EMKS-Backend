@@ -68,6 +68,11 @@ PERMISSIONS = [
     {"code": "role:create", "name": "建立角色", "resource": "role", "action": "create"},
     {"code": "role:edit", "name": "編輯角色", "resource": "role", "action": "edit"},
     {"code": "role:delete", "name": "刪除角色", "resource": "role", "action": "delete"},
+    # Document — resource-level 存取靠 can_access_document (rbac.py)；
+    # 這裡的 code 管的是 role-level「誰可以執行 write 操作」
+    {"code": "document:create", "name": "上傳文件", "resource": "document", "action": "create"},
+    {"code": "document:edit", "name": "編輯文件（上傳新版本 / 還原）", "resource": "document", "action": "edit"},
+    {"code": "document:delete", "name": "刪除文件", "resource": "document", "action": "delete"},
     # System
     {"code": "system:view", "name": "查看系統資訊", "resource": "system", "action": "view"},
     # AI — agent 用 ai:admin_tools 判斷是否為 admin（見 routers/ai.py::_check_admin）
@@ -83,8 +88,11 @@ ROLES = [
 
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "admin": [p["code"] for p in PERMISSIONS],
-    "manager": ["user:view", "department:view", "role:view", "system:view"],
-    "employee": ["department:view"],
+    "manager": [
+        "user:view", "department:view", "role:view", "system:view",
+        "document:create", "document:edit", "document:delete",
+    ],
+    "employee": ["department:view", "document:create", "document:edit"],
     "viewer": [],
 }
 
