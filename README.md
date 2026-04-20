@@ -56,7 +56,7 @@ ChromaDB 查詢時直接把 RBAC 條件傳進 `where` clause，HNSW 搜尋只掃
 ### AI 問答（SSE 串流）
 - 單一對話框，Agent 自動路由 4 個 tools：知識庫搜尋 / 最近文件 / 待審文件 / 熱門問題
 - 多輪對話（LlamaIndex condense question）
-- 逐 token 串流（SSE）+ 引用來源顯示
+- 逐 token 串流（SSE）+ 引用來源顯示（可點擊下載原檔，複用既有 RBAC 守門的 download endpoint）
 - 拒答時不顯示無關來源（Sources UX 優化）
 
 ### 文件管理 + 向量化
