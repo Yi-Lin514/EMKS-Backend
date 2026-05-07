@@ -30,7 +30,7 @@ def _check_admin(db: Session, user_id: int) -> bool:
 
 
 @router.post("/agent")
-@limiter.limit("5/minute;10/day")
+@limiter.limit("5/minute;30/day")
 async def agent_chat(
     payload: AgentRequest,
     request: Request,
