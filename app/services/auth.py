@@ -124,8 +124,8 @@ def create_password_reset_token(db: Session, user_id: int, token_type: UserToken
     # 產生隨機token(32 bytes = 256 bits，URL安全格式)
     token = secrets.token_urlsafe(32)
 
-    # 計算過期時間(1小時後)
-    expires_at = datetime.utcnow() + timedelta(hours=1)
+    # 計算過期時間（與信件文案 settings.PASSWORD_RESET_EXPIRE_HOURS 統一來源）
+    expires_at = datetime.utcnow() + timedelta(hours=settings.PASSWORD_RESET_EXPIRE_HOURS)
 
     # 建立 UserToken 紀錄
     user_token = UserToken(
