@@ -4,6 +4,8 @@ AI 驅動的企業知識管理平台：文件管理 + RAG 問答 + Agent 自動�
 
 **Live Demo**: https://emks-frontend.vercel.app（首次載入需等 30-120 秒冷啟動）
 
+**Demo 影片**: 🎥 [完整功能展示播放清單](https://www.youtube.com/watch?v=XIMqSGli-tI&list=PLE0JJfyjW48fgTjk15cM5wljBlXIY8-ys)
+
 ---
 
 ## 解決什麼問題
@@ -28,6 +30,18 @@ EMKS 把兩件事合在一起：**用自然語言問公司內部知識，答案�
 ### 權限是 pre-filter 不是 post-filter
 
 ChromaDB 查詢時直接把 RBAC 條件傳進 `where` clause，HNSW 搜尋只掃有權限的向量。不是搜完全部再砍結果 — 效能更好、也不會在 response 裡洩漏無權限文件的存在。
+
+### SSE 串流：跨 async/sync 邊界的三層防線
+
+LLM 答案 20 秒不能等，前端逐字顯示是 UX 強需求。但 SSE 串流橫跨 async router 跟 sync agent generator 兩個世界 — 連續踩三輪坑才形成完整的防線敘事：
+
+1. **斷線偵測**：`is_disconnected()` polling + `try/finally` 關 OpenAI stream — 不偵測會花 token 沒人看
+2. **Service 層自開 SessionLocal**：sync generator 在 worker thread / async router 在 event loop，SQLAlchemy session 跨 thread 不安全 — 借 router 注入的 session 會 race condition + connection 爆
+3. **ContextVar 在 async handler 一開始 set**：FastAPI `iterate_in_threadpool` 進 thread 那刻才複製 context — set 必須在進 thread 之前，否則 tool 內讀不到 user 資訊
+
+換 `astream()` 路徑就少兩層（async-native 沒跨 thread）— 但連續三輪修完 sync 路徑已穩定，列為已知 tech debt（見 [ARCHITECTURE.md](ARCHITECTURE.md)）。
+
+> 三層防線不是預先設計，是踩過三輪坑才看到的 narrative — async/sync 邊界三類問題。
 
 ### 手寫先於框架
 
@@ -76,6 +90,12 @@ ChromaDB 查詢時直接把 RBAC 條件傳進 `where` clause，HNSW 搜尋只掃
 - 忘記密碼（SMTP 寄信 → 一次性 token → 重設）
 - 帳號啟用（admin 建帳號 → 寄啟用信 → 設密碼）
 - 登入失敗鎖定（5 次 → 15 分鐘）+ 稽核紀錄
+
+### 工程品質
+- **pytest 覆蓋**：auth + RBAC + agent eval（10+ tests，sqlite in-memory；agent eval 用 parametrize + spy 抓到並修了 system prompt 規則 #3）
+- **限流**：`/ai/agent` 5/min + 30/day per user · `/auth/login` 10/min per IP（slowapi，對標 Glean 額度設計）
+- **可觀測性**：loguru structured logging + ContextVar 注入 request_id（每筆 log 帶 trace ID 跨多服務追蹤）
+- **冷啟動 UX**：`/health/ready` + 前端輪詢 overlay（防 Render free tier 30-120 秒冷啟動的黑屏）
 
 ---
 
