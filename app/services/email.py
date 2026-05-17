@@ -1,10 +1,32 @@
 import smtplib
+import socket as _socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from loguru import logger
 
 from app.config import settings
+
+
+# ====================================================================
+# Force IPv4 for outbound socket connections
+# ====================================================================
+# Render free tier 容器無 IPv6 outbound routing，但 Python 的
+# socket.getaddrinfo 預設優先回 IPv6 結果，導致 smtplib 連 smtp.gmail.com
+# 直接撞 "Network is unreachable" 而不會 fallback 到 IPv4。
+#
+# 此處 monkey patch 全域 getaddrinfo,只回 IPv4 結果。對整個 app 安全:
+#   - OpenAI / ChromaDB / MySQL 連線皆不依賴 IPv6
+#   - 本地 docker network 走 hostname mapping,不經 getaddrinfo
+# ====================================================================
+_orig_getaddrinfo = _socket.getaddrinfo
+
+
+def _ipv4_only_getaddrinfo(*args, **kwargs):
+    return [r for r in _orig_getaddrinfo(*args, **kwargs) if r[0] == _socket.AF_INET]
+
+
+_socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 
 def send_email(to_email: str, subject: str, html_content: str) -> bool:
