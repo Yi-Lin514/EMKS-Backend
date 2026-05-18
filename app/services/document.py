@@ -87,17 +87,6 @@ def get_next_version_number(db: Session, document_id: int) -> int:
     return (max_version or 0) + 1
 
 
-def get_latest_version(db: Session, document_id: int) -> KnowledgeDocVersion | None:
-    """獲取知識文件的最新版本"""
-
-    return (
-        db.query(KnowledgeDocVersion)
-        .filter(KnowledgeDocVersion.document_id == document_id)
-        .order_by(KnowledgeDocVersion.version.desc())
-        .first()
-    )
-
-
 def upload_new_version(
     db: Session,
     document: KnowledgeDocument,
@@ -139,6 +128,22 @@ def get_version_by_id(db: Session, version_id: int) -> KnowledgeDocVersion | Non
     """獲取指定ID的知識文件版本"""
 
     return db.query(KnowledgeDocVersion).filter(KnowledgeDocVersion.id == version_id).first()
+
+
+def find_version_by_checksum(
+    db: Session, document_id: int, checksum: str
+) -> KnowledgeDocVersion | None:
+    """在指定文件的所有版本（含 pending / approved）中比對 checksum，重複即返回該版本"""
+
+    return (
+        db.query(KnowledgeDocVersion)
+        .filter(
+            KnowledgeDocVersion.document_id == document_id,
+            KnowledgeDocVersion.checksum == checksum,
+        )
+        .order_by(KnowledgeDocVersion.version.desc())
+        .first()
+    )
 
 
 def restore_version(

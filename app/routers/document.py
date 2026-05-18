@@ -213,7 +213,7 @@ async def upload_new_version(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("document:edit")),
 ):
-    """上傳新版本，檢查檔案類型一致 + checksum 防重複，status=pending 待審核"""
+    """上傳新版本，檢查檔案類型一致 + 全版本 checksum 防重複（含 pending），status=pending 待審核"""
 
     document = document_service.get_document_by_id(db, document_id)
     if not document:
@@ -236,12 +236,12 @@ async def upload_new_version(
 
     file_path, file_size, file_type, checksum = await document_service.save_uploaded_file(file)
 
-    latest = document_service.get_latest_version(db, document.id)
-    if latest and latest.checksum == checksum:
+    duplicate = document_service.find_version_by_checksum(db, document.id, checksum)
+    if duplicate:
         os.remove(file_path)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="檔案內容與最新版本相同，無需更新",
+            detail=f"檔案內容與第 {duplicate.version} 版相同，無需重複上傳",
         )
 
     try:
