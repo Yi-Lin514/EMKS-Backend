@@ -4,7 +4,7 @@ AI 驅動的企業知識管理平台：文件管理 + RAG 問答 + Agent 自動�
 
 **Live Demo**: https://emks-frontend.vercel.app（首次載入需等 30-120 秒冷啟動）
 
-**Demo 影片**: 🎥 [完整功能展示播放清單](https://www.youtube.com/watch?v=XIMqSGli-tI&list=PLE0JJfyjW48fgTjk15cM5wljBlXIY8-ys)
+**Demo 影片**: 🎥 [完整功能展示 Demo](https://youtu.be/ziwNRBcmG5Y)
 
 **技術白皮書**: 📄 [EMKS 技術白皮書 PDF](WHITEPAPER.pdf)（完整架構決策、反方案分析、踩坑記錄）
 
